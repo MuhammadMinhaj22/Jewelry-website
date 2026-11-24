@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin | Jawaahir Jewelry</title>
+<style>
+:root{--bg:#0e0e0f;--c:#1a1a1d;--t:#f1e9d6;--m:#a39b88;--g:#d4af37;--l:#2c2c30}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font:14px/1.5 system-ui,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:var(--t);background:var(--c);border:1px solid var(--l);padding:8px 10px;border-radius:6px}
+button{cursor:pointer}.pb{background:var(--g);color:#111;border-color:var(--g);font-weight:600}.dg{color:#ff7b7b}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--l);position:sticky;top:0;background:var(--bg);z-index:5;flex-wrap:wrap;gap:8px}
+header b{color:var(--g);font-size:18px}nav button.on{background:var(--g);color:#111}main{padding:18px;max-width:1150px;margin:auto}
+#login{max-width:340px;margin:18vh auto;padding:24px;background:var(--c);border-radius:10px;display:grid;gap:10px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.card{background:var(--c);padding:16px;border-radius:10px}.card b{display:block;font-size:26px;color:var(--g)}
+table{width:100%;border-collapse:collapse;background:var(--c);border-radius:10px;overflow:hidden}th,td{padding:9px 10px;border-bottom:1px solid var(--l);text-align:left;vertical-align:top}th{color:var(--m);font-weight:500}
+td img{width:46px;height:46px;object-fit:cover;border-radius:6px}.sc{overflow:auto}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;background:var(--c);padding:16px;border-radius:10px;margin-bottom:16px}form .w{grid-column:1/-1}
+.tag{padding:2px 8px;border-radius:20px;background:var(--l);font-size:12px}.hide{display:none}h2{margin:18px 0 10px}
+</style></head><body>
+<div id="login" class="hide"><h2 style="margin:0;color:var(--g)">Jawaahir Admin</h2><input id="pw" type="password" placeholder="Password" onkeydown="if(event.key=='Enter')go()"><button class="pb" onclick="go()">Login</button><small id="le" class="dg"></small></div>
+<div id="app" class="hide"><header><b>Jawaahir Admin</b><nav><button id="t-d" onclick="tab('d')">Dashboard</button> <button id="t-p" onclick="tab('p')">Products</button> <button id="t-o" onclick="tab('o')">Orders</button></nav><span><a href="/" target="_blank" style="color:var(--m)">View store</a> <button onclick="out()">Logout</button></span></header><main id="m"></main></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rs=n=>'Rs. '+Number(n).toLocaleString('en-US');let PR=[],imgData='';
+async function api(u,method='GET',body){const r=await fetch('/admin/api/'+u,{method,headers:{'Content-Type':'application/json'},body:body&&JSON.stringify(body)});
+ if(r.status==401&&u!='login'){show(0);throw 0}const j=await r.json();if(!r.ok)throw new Error(j.error||'Error');return j}
+function show(v){$('#login').classList.toggle('hide',!!v);$('#app').classList.toggle('hide',!v)}
+async function go(){try{await api('login','POST',{password:$('#pw').value});show(1);tab('d')}catch(e){$('#le').textContent=e.message||'Login failed'}}
+async function out(){await api('logout','POST');show(0)}
+function tab(t){['d','p','o'].forEach(x=>$('#t-'+x).classList.toggle('on',x==t));({d:dash,p:prods,o:orders})[t]()}
+async function dash(){const s=await api('stats');$('#m').innerHTML=`<div class="cards"><div class="card">Total orders<b>${s.orders}</b></div><div class="card">New orders<b>${s.fresh}</b></div><div class="card">Revenue (confirmed+)<b>${rs(s.revenue)}</b></div><div class="card">Products<b>${s.products}</b></div><div class="card">Out of stock<b>${s.out}</b></div></div><h2>Latest orders</h2><div id="lo"></div>`;
+ const o=(await api('orders')).slice(0,5);$('#lo').innerHTML=o.length?tbl(o):'<p>Abhi koi order nahi aaya.</p>'}
+function tbl(o){return `<div class="sc"><table><tr><th>#</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th></tr>${o.map(x=>`<tr><td>${x.id}</td><td>${esc(x.created.slice(0,16))}</td><td>${esc(x.name)}<br><a style="color:var(--g)" href="https://wa.me/${esc(x.phone.replace(/\D/g,'').replace(/^0/,'92'))}" target="_blank">${esc(x.phone)}</a><br><small>${esc(x.address)}</small></td><td>${x.items.map(i=>esc(i.name)+' ×'+i.qty).join('<br>')}</td><td>${rs(x.total)}</td><td><select onchange="st(${x.id},this.value)">${['new','confirmed','shipped','delivered','cancelled'].map(s=>`<option ${s==x.status?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</table></div>`}
+async function orders(){const o=await api('orders');$('#m').innerHTML='<h2 style="margin-top:0">Orders</h2>'+(o.length?tbl(o):'<p>Abhi koi order nahi aaya.</p>')}
+async function st(id,s){await api('orders/'+id,'PATCH',{status:s})}
+async function prods(){PR=await api('products');imgData='';
+ $('#m').innerHTML=`<h2 style="margin-top:0" id="ft">Add product</h2><form id="f" onsubmit="save(event)"><input name="id" type="hidden"><input name="name" placeholder="Name" required><input name="category" list="cl" placeholder="Category" required><datalist id="cl">${[...new Set(PR.map(p=>p.category))].map(c=>`<option>${esc(c)}`).join('')}</datalist><input name="price" type="number" placeholder="Price (PKR)" required><input name="compare_at_price" type="number" placeholder="Old price (optional)"><select name="badge"><option value="">No badge</option><option>New</option><option>Best Seller</option><option>Sale</option><option>Limited</option></select><select name="in_stock"><option value="1">In stock</option><option value="0">Out of stock</option></select><textarea class="w" name="description" rows="2" placeholder="Description"></textarea><label class="w">Photo <input type="file" accept="image/*" onchange="pick(this)"></label><div class="w"><button class="pb">Save product</button> <button type="button" onclick="prods()">Clear</button></div></form>
+ <div class="sc"><table><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>${PR.map((p,i)=>`<tr><td><img src="${esc(p.img)}" alt=""></td><td>${esc(p.name)}${p.badge?` <span class="tag">${esc(p.badge)}</span>`:''}</td><td>${esc(p.category)}</td><td>${rs(p.price)}${p.compare_at_price?` <s>${rs(p.compare_at_price)}</s>`:''}</td><td>${p.in_stock?'Yes':'<b class="dg">No</b>'}</td><td><button onclick="edit(${i})">Edit</button> <button class="dg" onclick="del(${i})">Delete</button></td></tr>`).join('')}</table></div>`}
+function pick(el){const f=el.files[0];if(!f)return;const im=new Image;im.onload=()=>{const s=Math.min(1,1000/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);imgData=c.toDataURL('image/jpeg',.85)};im.src=URL.createObjectURL(f)}
+function edit(i){const p=PR[i],f=$('#f');for(const k of ['id','name','category','price','compare_at_price','badge','description'])f[k].value=p[k]??'';f.in_stock.value=p.in_stock?1:0;imgData='';$('#ft').textContent='Edit: '+p.name;scrollTo(0,0)}
+async function save(e){e.preventDefault();const b=Object.fromEntries(new FormData(e.target));b.in_stock=b.in_stock=='1';if(imgData)b.imageData=imgData;try{await api('products','POST',b);prods()}catch(x){alert(x.message)}}
+async function del(i){if(confirm('Delete '+PR[i].name+'?')){await api('products/'+PR[i].id,'DELETE');prods()}}
+api('stats').then(()=>{show(1);tab('d')}).catch(()=>show(0));
+</script></body></html>
