@@ -15,6 +15,11 @@ Store: http://localhost:3000   Admin: http://localhost:3000/admin
 - Environment variables mein ADMIN_PASSWORD set karein, phir Run NPM Install aur Restart.
 - SSL (AutoSSL) lagayein aur HTTPS redirect on karein.
 
+## Cloudflare Pages (static catalog)
+- Build command: `npm run build`; build output directory: `public`.
+- Build creates `/api/products.js` and copies the seed catalog images to `/images/`, which Pages can serve as static assets.
+- Pages only serves this static catalog. Checkout/order APIs, admin APIs, and uploaded product images require a running Node.js backend; deploying this project to Pages alone does not run `server.js`.
+
 ## Security notes
 - Prices aur total hamesha server database se nikalte hain. Client ki bheji price ignore hoti hai.
 - Admin login: 8 koshish / 15 minute / IP. Session 12 ghante, database mein, logout par khatam.
